@@ -7,11 +7,20 @@ public class Message implements Serializable {
 
     private static final long serialVersionUID = -5399605122490343339L;
 
-    private @Id @GeneratedValue @Column(name="id") Integer id;
-    private @Column(name = "dateCreation", nullable = false) @Temporal(TemporalType.TIMESTAMP) Date dateCreation;
-    private @ManyToOne(targetEntity = Utilisateur.class) @Column(nullable = false) Utilisateur auteur;
-    private @Column(name = "suspendre", nullable = false) Boolean suspendu;
-    private @Column(name = "message", nullable = false) String message;
+    @Id @GeneratedValue @Column(name="id")
+    private Integer id;
+
+    @Column(name = "dateCreation", nullable = false) @Temporal(TemporalType.TIMESTAMP)
+    private Date dateCreation;
+
+    @ManyToOne(targetEntity = Utilisateur.class) @Column(nullable = false)
+    private Utilisateur auteur;
+
+    @Column(name = "suspendre", nullable = false)
+    private Boolean suspendu;
+
+    @Column(name = "message", nullable = false)
+    private String message;
 
     public Message() {}
 

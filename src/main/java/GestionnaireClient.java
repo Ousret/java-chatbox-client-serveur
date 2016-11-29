@@ -5,8 +5,11 @@ import java.net.Socket;
 
 public class GestionnaireClient implements Runnable {
 
-    Socket socket;
-    Serveur instanceMere;
+    private Socket socket;
+    private Serveur instanceMere;
+
+    private Salon salon;
+    private Session session;
 
     public GestionnaireClient(Socket unSocketClient, Serveur uneInstanceMere)
     {
@@ -16,9 +19,7 @@ public class GestionnaireClient implements Runnable {
         Thread thread = new Thread(this);
         thread.setDaemon(true);
         thread.start();
-
     }
-
 
     public void run() {
 
@@ -29,26 +30,22 @@ public class GestionnaireClient implements Runnable {
             String inputLine, outputLine;
 
 			/* Boucle pour la communication */
-
             while ((inputLine = in.readLine()) != null) {
                 this.instanceMere.logger.info(String.format("<Client:%s:%d> Message> %s", this.socket.getInetAddress(), this.socket.getPort(), inputLine));
                 outputLine = inputLine;
                 out.println(outputLine);
                 out.flush();
-
             }
 
-            System.out.println("<Debug> Un client n'est plus en ligne.");
+            this.instanceMere.logger.info(String.format("<Client:%s:%d> s'est déconnecté.", this.socket.getInetAddress(), this.socket.getPort()));
 
             out.close();
             in.close();
-            socket.close();
-            //instancePrincipale.removeClient(this);
+
+            this.socket.close();
 
         } catch (Exception e) {
-
-            System.out.println("<Debug> Exception: " + e);
-
+            this.instanceMere.logger.warning(String.format("<Client:%s:%d> Une exception dans la gestion cliente s'est produite: %s", this.socket.getInetAddress(), this.socket.getPort(), e.getMessage()));
         }
 
     }

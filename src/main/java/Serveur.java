@@ -10,7 +10,6 @@ public class Serveur implements Runnable {
 
     private static Serveur instanceUnique;
 
-    //private ConsoleHandler consoleHandler;
     public final Logger logger = Logger.getLogger(Serveur.class.getName());
 
     private ServerSocketFactory serverSocketFactory = (ServerSocketFactory) ServerSocketFactory.getDefault();
@@ -24,9 +23,6 @@ public class Serveur implements Runnable {
 
     private Serveur()
     {
-        //this.consoleHandler = new ConsoleHandler();
-        //this.logger.addHandler(this.consoleHandler);
-
         this.clients = new ArrayList<GestionnaireClient>();
 
         this.thread = new Thread(this);
@@ -65,8 +61,9 @@ public class Serveur implements Runnable {
         for(;;){
             try
             {
-                Socket client = this.serverSocket.accept();
-                this.clients.add(new GestionnaireClient(client, this));
+                Socket nouveauClient = this.serverSocket.accept();
+                this.logger.info(String.format("<Serveur:%s:%d> Négociation client", nouveauClient.getInetAddress(), nouveauClient.getPort()));
+                this.clients.add(new GestionnaireClient(nouveauClient, this));
             }catch (IOException e)
             {
                 this.logger.warning("Impossible de traiter un client: "+e.getMessage());
@@ -85,10 +82,10 @@ public class Serveur implements Runnable {
         }catch (InterruptedException e)
         {
             System.out.println(e.getMessage());
+            System.exit(-1);
         }
 
         System.exit(0);
-
     }
 
 }
