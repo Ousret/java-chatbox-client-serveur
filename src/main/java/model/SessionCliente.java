@@ -1,22 +1,26 @@
+package model;
+
 import javax.persistence.*;
+import java.io.Serializable;
 import java.util.Date;
 
-@Entity(name = "session")
-public class Session {
+@Entity(name = "sessioncliente")
+@Table(name = "sessioncliente")
+public class SessionCliente implements Serializable {
 
     @Id @GeneratedValue
     private Integer id;
 
-    @OneToMany(targetEntity = Utilisateur.class) @Column(nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "utilisateur_id")
     private Utilisateur utilisateur;
 
     @Column(name = "dateCreation", nullable = false)
     @Temporal(TemporalType.TIMESTAMP)
     private Date debutSession;
 
-    public Session() {}
+    public SessionCliente() {}
 
-    public Session(Utilisateur unUtilisateur, Date uneDateDebut)
+    public SessionCliente(Utilisateur unUtilisateur, Date uneDateDebut)
     {
         this.utilisateur = unUtilisateur;
         this.debutSession = uneDateDebut;

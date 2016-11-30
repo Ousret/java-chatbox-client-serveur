@@ -1,8 +1,11 @@
+package model;
+
 import javax.persistence.*;
 import java.io.Serializable;
 import java.util.Date;
 
 @Entity(name = "message")
+@Table(name = "message")
 public class Message implements Serializable {
 
     private static final long serialVersionUID = -5399605122490343339L;
@@ -13,7 +16,7 @@ public class Message implements Serializable {
     @Column(name = "dateCreation", nullable = false) @Temporal(TemporalType.TIMESTAMP)
     private Date dateCreation;
 
-    @ManyToOne(targetEntity = Utilisateur.class) @Column(nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "utilisateur_id", nullable = false)
     private Utilisateur auteur;
 
     @Column(name = "suspendre", nullable = false)

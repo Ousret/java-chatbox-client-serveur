@@ -1,9 +1,12 @@
+import org.hibernate.*;
+import org.hibernate.persister.entity.EntityPersister;
+
 import javax.net.ServerSocketFactory;
+import javax.persistence.*;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.logging.ConsoleHandler;
 import java.util.logging.Logger;
 
 public class Serveur implements Runnable {
@@ -21,8 +24,17 @@ public class Serveur implements Runnable {
 
     public Thread thread;
 
+    @PersistenceUnit(unitName="Ousret")
+    private EntityManagerFactory entityManagerFactory;
+
+    @PersistenceContext(unitName="Ousret")
+    private EntityManager entityManager;
+
     private Serveur()
     {
+        this.entityManagerFactory = Persistence.createEntityManagerFactory("Ousret");
+        this.entityManager = this.entityManagerFactory.createEntityManager();
+
         this.clients = new ArrayList<GestionnaireClient>();
 
         this.thread = new Thread(this);
@@ -43,11 +55,20 @@ public class Serveur implements Runnable {
 
     public void run() {
 
+        /*EntityTransaction transac = em.getTransaction();
+        transac.begin();
+        Utilisateur nouvellePersonne = new Utilisateur("", new Date("2016/01/01"), "", "");
+        em.persist(nouvellePersonne);
+        transac.commit();
+
+        em.close();
+        emf.close();*/
+
         this.logger.info(String.format("Création du serveur sur le port %d", this.SERVEUR_PORT_DEFAULT));
 
         try
         {
-            this.serverSocket = (ServerSocket) this.serverSocketFactory.createServerSocket(this.SERVEUR_PORT_DEFAULT);
+            this.serverSocket = this.serverSocketFactory.createServerSocket(this.SERVEUR_PORT_DEFAULT);
         }
         catch (IOException e)
         {

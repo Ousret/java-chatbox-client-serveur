@@ -1,3 +1,5 @@
+package model;
+
 import javax.persistence.*;
 import java.util.Date;
 import java.util.Set;
@@ -8,7 +10,7 @@ public class Salon {
     @Id @GeneratedValue @Column(name="id")
     private Integer id;
 
-    @ManyToOne(targetEntity = Utilisateur.class) @Column(nullable = false)
+    @ManyToOne(targetEntity = Utilisateur.class) @JoinColumn(nullable = false, name = "utilisateur_id")
     private Utilisateur proprietaire;
 
     @Column(name = "designation", nullable = false)
