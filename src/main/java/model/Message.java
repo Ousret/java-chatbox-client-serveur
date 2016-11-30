@@ -10,7 +10,10 @@ public class Message implements Serializable {
 
     private static final long serialVersionUID = -5399605122490343339L;
 
-    @Id @GeneratedValue @Column(name="id")
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator="message_id_seq")
+    @SequenceGenerator(name="message_id_seq", sequenceName="message_id_seq", allocationSize=1)
+    @Column(name="id")
     private Integer id;
 
     @Column(name = "dateCreation", nullable = false) @Temporal(TemporalType.TIMESTAMP)
@@ -25,14 +28,19 @@ public class Message implements Serializable {
     @Column(name = "message", nullable = false)
     private String message;
 
+    @ManyToOne(targetEntity = Salon.class)
+    @JoinColumn(nullable = false, name = "salon_id")
+    private Salon salon;
+
     public Message() {}
 
-    public Message(Date uneDateCreation, Utilisateur unAuteur, Boolean unEtatModeration, String unMessage)
+    public Message(Date uneDateCreation, Utilisateur unAuteur, Boolean unEtatModeration, String unMessage, Salon unSalon)
     {
         this.dateCreation = uneDateCreation;
         this.auteur = unAuteur;
         this.suspendu = unEtatModeration;
         this.message = unMessage;
+        this.salon = unSalon;
     }
 
     public Integer getId() { return this.id; }
@@ -52,4 +60,6 @@ public class Message implements Serializable {
     public String getMessage() {
         return message;
     }
+
+    public Salon getSalon() { return this.salon; }
 }

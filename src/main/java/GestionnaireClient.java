@@ -10,6 +10,8 @@ public class GestionnaireClient implements Runnable {
     private final String DEMANDE_INITIALISATION = "HELLO";
     private final String DEMANDE_AUTHENTIFICATION = "AUTH";
     private final String DEMANDE_ANONYME = "ANONYMOUS";
+    private final String AUTH_ERREUR = "NOMATCH";
+    private final String AUTH_OK = "MATCH";
 
     private Socket socket;
     private Serveur instanceMere;

@@ -10,7 +10,10 @@ import java.util.Set;
 @Table(name = "utilisateur")
 public class Utilisateur implements Serializable {
 
-    @Id @GeneratedValue @Column(name="id")
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator="utilisateur_id_seq")
+    @SequenceGenerator(name="utilisateur_id_seq", sequenceName="utilisateur_id_seq", allocationSize=1)
+    @Column(name="id")
     private Integer id;
 
     @Column(name = "pseudo", nullable = false)

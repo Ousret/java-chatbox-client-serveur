@@ -8,10 +8,13 @@ import java.util.Date;
 @Table(name = "sessioncliente")
 public class SessionCliente implements Serializable {
 
-    @Id @GeneratedValue
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator="sessioncliente_id_seq")
+    @SequenceGenerator(name="sessioncliente_id_seq", sequenceName="sessioncliente_id_seq", allocationSize=1)
     private Integer id;
 
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "utilisateur_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "utilisateur_id")
     private Utilisateur utilisateur;
 
     @Column(name = "dateCreation", nullable = false)

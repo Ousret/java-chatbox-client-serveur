@@ -1,16 +1,21 @@
 package model;
 
 import javax.persistence.*;
+import java.io.Serializable;
 import java.util.Date;
 import java.util.Set;
 
 @Entity(name = "salon")
-public class Salon {
+public class Salon implements Serializable {
 
-    @Id @GeneratedValue @Column(name="id")
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator="salon_id_seq")
+    @SequenceGenerator(name="salon_id_seq", sequenceName="salon_id_seq", allocationSize=1)
+    @Column(name="id")
     private Integer id;
 
-    @ManyToOne(targetEntity = Utilisateur.class) @JoinColumn(nullable = false, name = "utilisateur_id")
+    @ManyToOne(targetEntity = Utilisateur.class)
+    @JoinColumn(nullable = false, name = "utilisateur_id")
     private Utilisateur proprietaire;
 
     @Column(name = "designation", nullable = false)
@@ -19,7 +24,8 @@ public class Salon {
     @Column(name = "prive", nullable = false)
     private Boolean prive;
 
-    @Column(name = "dateCreation", nullable = false) @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "dateCreation", nullable = false)
+    @Temporal(TemporalType.TIMESTAMP)
     private Date dateCreation;
 
     @ManyToMany(targetEntity = Utilisateur.class)

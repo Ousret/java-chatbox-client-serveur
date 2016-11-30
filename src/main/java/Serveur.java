@@ -1,3 +1,4 @@
+import model.Utilisateur;
 import org.hibernate.*;
 import org.hibernate.persister.entity.EntityPersister;
 
@@ -7,6 +8,8 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import java.util.logging.Logger;
 
 public class Serveur implements Runnable {
@@ -42,6 +45,25 @@ public class Serveur implements Runnable {
         this.thread.start();
     }
 
+    /**
+     * Recherche un utilisateur en ayant un hash et salt
+     * @param unHash Le hash sha256
+     * @param unSalt Le salt du hash
+     * @return Utilisateur|null
+     */
+    public Utilisateur getUtilisateur(String unHash, String unSalt)
+    {
+        EntityTransaction entityTransaction = this.entityManager.getTransaction();
+
+        entityTransaction.begin();
+        Utilisateur utilisateur = this.entityManager.createQuery("SELECT u FROM utilisateur u WHERE u.hash = :hash_cible AND u.salt = :salt_cible", Utilisateur.class)
+                .setParameter("hash_cible", unHash)
+                .setParameter("salt_cible", unSalt)
+                .getSingleResult();
+
+        return utilisateur;
+    }
+
     public static Serveur getInstance()
     {
         if (Serveur.instanceUnique != null)
@@ -54,15 +76,6 @@ public class Serveur implements Runnable {
     }
 
     public void run() {
-
-        /*EntityTransaction transac = em.getTransaction();
-        transac.begin();
-        Utilisateur nouvellePersonne = new Utilisateur("", new Date("2016/01/01"), "", "");
-        em.persist(nouvellePersonne);
-        transac.commit();
-
-        em.close();
-        emf.close();*/
 
         this.logger.info(String.format("Création du serveur sur le port %d", this.SERVEUR_PORT_DEFAULT));
 
