@@ -27,6 +27,8 @@ public class Client extends Observable implements Runnable {
     private final String ASK_USERNAME = "ASK_USERNAME";
     private final String ASK_PASSWD = "ASK_PASSWD";
 
+    private final String ASK_ENTER_SALON = "ASK_ENTER_SALON";
+
     public final Logger logger = Logger.getLogger(Client.class.getName());
 
     private String identifiant, adresseIp, phraseSecrete, sessionUuid;
@@ -230,15 +232,21 @@ public class Client extends Observable implements Runnable {
 
         this.logger.info("Lancement du client..");
 
+        /* 1) Connexion */
         if (!this.connecter())
         {
             this.logger.severe("Impossible d'établir une connexion au serveur");
+            return;
         }
 
+        /* 2) Authentification */
         if (!this.authentification())
         {
             this.logger.severe("Authentification échouée.");
+            return;
         }
+
+
 
     }
 

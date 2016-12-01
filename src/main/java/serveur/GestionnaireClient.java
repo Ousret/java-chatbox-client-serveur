@@ -1,5 +1,6 @@
 package serveur;
 
+import client.Paquet;
 import model.Salon;
 import model.SessionCliente;
 import model.Utilisateur;
@@ -24,6 +25,8 @@ public class GestionnaireClient implements Runnable, Observer {
 
     private final String ASK_USERNAME = "ASK_USERNAME";
     private final String ASK_PASSWD = "ASK_PASSWD";
+
+    private final String ASK_ENTER_SALON = "ASK_ENTER_SALON";
 
     private Socket socket;
     private Serveur instanceMere;
@@ -278,6 +281,7 @@ public class GestionnaireClient implements Runnable, Observer {
     public void run() {
 
         String rIn;
+        Paquet paquetClient;
 
         try
         {
@@ -308,8 +312,38 @@ public class GestionnaireClient implements Runnable, Observer {
             return;
         }
 
+        this.instanceMere.logger.info(String.format("<Client:%s:%d> Début de l'écoute client..", this.socket.getInetAddress(), this.socket.getPort()));
+
+        for(;;)
+        {
+
+            try
+            {
+                paquetClient = (Paquet) this.objectInputStream.readObject();
+            }
+            catch (Exception e)
+            {
+                this.instanceMere.logger.warning(String.format("<Client:%s:%d> Format de données reçu invalide."));
+                this.fermer();
+                return;
+            }
+
+            if (!paquetClient.getSessionUuid().equals(this.sessionCliente.getUuid()))
+            {
+                this.instanceMere.logger.warning(String.format("<Client:%s:%d> Cookie érronée, impossible de vérifier l'identité du client."));
+                this.fermer();
+                return;
+            }
+
+            if (paquetClient.getCommande().equals(this.ASK_ENTER_SALON))
+            {
+                this.clientChoisirSalon();
+            }
+
+        }
+
         // 3) Envoyer la liste des salons disponibles
-        this.clientChoisirSalon();
+        //this.clientChoisirSalon();
 
         // 4) Inscrire dans les events du salon
 
