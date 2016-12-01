@@ -1,18 +1,17 @@
+package serveur;
+
+import model.Salon;
 import model.Utilisateur;
-import org.hibernate.*;
-import org.hibernate.persister.entity.EntityPersister;
 
 import javax.net.ServerSocketFactory;
 import javax.persistence.*;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Logger;
 
-public class Serveur implements Runnable {
+public class Serveur extends Observable implements Runnable {
 
     private static Serveur instanceUnique;
 
@@ -48,20 +47,15 @@ public class Serveur implements Runnable {
     /**
      * Recherche un utilisateur en ayant un hash et salt
      * @param unHash Le hash sha256
-     * @param unSalt Le salt du hash
      * @return Utilisateur|null
      */
-    public Utilisateur getUtilisateur(String unHash, String unSalt)
+    public Utilisateur getUtilisateur(String unHash) throws NoResultException
     {
         EntityTransaction entityTransaction = this.entityManager.getTransaction();
 
-        entityTransaction.begin();
-        Utilisateur utilisateur = this.entityManager.createQuery("SELECT u FROM utilisateur u WHERE u.hash = :hash_cible AND u.salt = :salt_cible", Utilisateur.class)
+        return this.entityManager.createQuery("SELECT u FROM utilisateur u WHERE u.secret = :hash_cible", Utilisateur.class)
                 .setParameter("hash_cible", unHash)
-                .setParameter("salt_cible", unSalt)
                 .getSingleResult();
-
-        return utilisateur;
     }
 
     public static Serveur getInstance()
@@ -76,6 +70,8 @@ public class Serveur implements Runnable {
     }
 
     public void run() {
+
+        GestionnaireClient nouveauGestionnaireClient;
 
         this.logger.info(String.format("Création du serveur sur le port %d", this.SERVEUR_PORT_DEFAULT));
 
@@ -96,14 +92,23 @@ public class Serveur implements Runnable {
             try
             {
                 Socket nouveauClient = this.serverSocket.accept();
-                this.logger.info(String.format("<Serveur:%s:%d> Négociation client", nouveauClient.getInetAddress(), nouveauClient.getPort()));
-                this.clients.add(new GestionnaireClient(nouveauClient, this));
+                this.logger.info(String.format("<serveur.Serveur:%s:%d> Négociation client", nouveauClient.getInetAddress(), nouveauClient.getPort()));
+                nouveauGestionnaireClient = new GestionnaireClient(nouveauClient, this);
+                this.clients.add(nouveauGestionnaireClient);
+                this.addObserver(nouveauGestionnaireClient);
             }catch (IOException e)
             {
                 this.logger.warning("Impossible de traiter un client: "+e.getMessage());
             }
         }
 
+    }
+
+    public List<Salon> getEtat()
+    {
+        EntityTransaction entityTransaction = this.entityManager.getTransaction();
+        entityTransaction.begin();
+        return this.entityManager.createQuery("SELECT s FROM salon s", Salon.class).getResultList();
     }
 
     public static void main(String[] args)

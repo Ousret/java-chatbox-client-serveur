@@ -17,15 +17,19 @@ public class SessionCliente implements Serializable {
     @JoinColumn(name = "utilisateur_id")
     private Utilisateur utilisateur;
 
-    @Column(name = "dateCreation", nullable = false)
+    @Column(name = "uuid", unique = true)
+    private String uuid;
+
+    @Column(name = "debutSession", nullable = false)
     @Temporal(TemporalType.TIMESTAMP)
     private Date debutSession;
 
     public SessionCliente() {}
 
-    public SessionCliente(Utilisateur unUtilisateur, Date uneDateDebut)
+    public SessionCliente(Utilisateur unUtilisateur, String unUuid, Date uneDateDebut)
     {
         this.utilisateur = unUtilisateur;
+        this.uuid = unUuid;
         this.debutSession = uneDateDebut;
     }
 
@@ -34,6 +38,8 @@ public class SessionCliente implements Serializable {
     public Utilisateur getUtilisateur() {
         return utilisateur;
     }
+
+    public String getUuid() { return this.uuid; }
 
     public Date getDebutSession() {
         return debutSession;

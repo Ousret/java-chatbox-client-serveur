@@ -64,4 +64,9 @@ public class Salon implements Serializable {
     public Set<Utilisateur> getConnectes() {
         return connectes;
     }
+
+    public String toString()
+    {
+        return String.format("%s <%s>", this.getDesignation(), this.getProprietaire().getPseudo());
+    }
 }

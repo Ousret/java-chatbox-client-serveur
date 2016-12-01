@@ -3,5 +3,6 @@ CREATE TABLE sessioncliente
 (
     id SERIAL PRIMARY KEY,
     utilisateur_id INTEGER REFERENCES utilisateur(id),
+    uuid VARCHAR(255) UNIQUE,
     debutSession DATE
 );

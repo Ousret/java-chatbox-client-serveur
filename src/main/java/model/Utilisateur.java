@@ -16,35 +16,30 @@ public class Utilisateur implements Serializable {
     @Column(name="id")
     private Integer id;
 
-    @Column(name = "pseudo", nullable = false)
+    @Column(name = "pseudo", nullable = false, unique = true)
     private String pseudo;
 
     @Column(name = "dateCreation", nullable = false) @Temporal(TemporalType.TIMESTAMP)
     private Date dateCreation;
 
-    @Column(name = "secret", nullable = false)
+    @Column(name = "secret", nullable = false, unique = true)
     private String secret;
-
-    @Column(name = "salt", nullable = false)
-    private String salt;
 
     @OneToMany(mappedBy = "auteur")
     private Set<Message> messages;
 
     public Utilisateur() {}
 
-    public Utilisateur(String unPseudo, Date uneDateCreation, String unHashSecret, String unSalt)
+    public Utilisateur(String unPseudo, Date uneDateCreation, String unHashSecret)
     {
         this.pseudo = unPseudo;
         this.dateCreation = uneDateCreation;
         this.secret = unHashSecret;
-        this.salt = unSalt;
     }
 
     public Integer getId() { return this.id; }
     public String getPseudo() { return this.pseudo; }
     public String getSecret() { return this.secret; }
-    public String getSalt() { return this.salt; }
     public Date getDateCreation() { return this.dateCreation; }
 
     public Set<Message> getMessages() {
