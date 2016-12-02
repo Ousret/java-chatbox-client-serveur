@@ -49,11 +49,12 @@ public class Serveur extends Observable implements Runnable {
      * @param unHash Le hash sha256
      * @return Utilisateur|null
      */
-    public Utilisateur getUtilisateur(String unHash) throws NoResultException
+    public Utilisateur getUtilisateur(String unPseudo, String unHash) throws NoResultException
     {
         EntityTransaction entityTransaction = this.entityManager.getTransaction();
 
-        return this.entityManager.createQuery("SELECT u FROM utilisateur u WHERE u.secret = :hash_cible", Utilisateur.class)
+        return this.entityManager.createQuery("SELECT u FROM utilisateur u WHERE u.pseudo = :pseudo_cible AND u.secret = :hash_cible", Utilisateur.class)
+                .setParameter("pseudo_cible", unPseudo)
                 .setParameter("hash_cible", unHash)
                 .getSingleResult();
     }
@@ -67,6 +68,11 @@ public class Serveur extends Observable implements Runnable {
             Serveur.instanceUnique = new Serveur();
             return Serveur.instanceUnique;
         }
+    }
+
+    public boolean retirer(GestionnaireClient unClient)
+    {
+        return this.clients.remove(unClient);
     }
 
     public void run() {
@@ -106,8 +112,6 @@ public class Serveur extends Observable implements Runnable {
 
     public List<Salon> getEtat()
     {
-        EntityTransaction entityTransaction = this.entityManager.getTransaction();
-        entityTransaction.begin();
         return this.entityManager.createQuery("SELECT s FROM salon s", Salon.class).getResultList();
     }
 

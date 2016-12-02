@@ -1,6 +1,7 @@
 package serveur;
 
 import client.Paquet;
+import model.Message;
 import model.Salon;
 import model.SessionCliente;
 import model.Utilisateur;
@@ -27,6 +28,13 @@ public class GestionnaireClient implements Runnable, Observer {
     private final String ASK_PASSWD = "ASK_PASSWD";
 
     private final String ASK_ENTER_SALON = "ASK_ENTER_SALON";
+
+    private final String ASK_SALONS = "ASK_SALONS";
+
+    private final String ASK_MESSAGE = "ASK_MESSAGE";
+
+    private final String OK = "OK";
+    private final String KO = "KO";
 
     private Socket socket;
     private Serveur instanceMere;
@@ -59,77 +67,78 @@ public class GestionnaireClient implements Runnable, Observer {
         this.currentThread.start();
     }
 
+    private boolean isOnline() { return this.socket.isConnected(); }
+    private boolean isAuthenticated() { return this.isOnline() && this.sessionCliente != null; }
+
     /**
-     * Vérifie que le client nous envoie bien le message spécifié
-     * @param unMessageCible Le message à attendre
+     * Envoie un paquet d'instruction vers le client
+     * @param uneCommande Le nom de la commande
+     * @param uneDonnee Le conteneur d'objet
      * @return bool
      */
-    private boolean waitMessage(String unMessageCible)
+    private boolean sendPaquet(String uneCommande, Object uneDonnee)
     {
-        String rIn;
+        if (!this.isOnline())
+        {
+            this.instanceMere.logger.warning(String.format("<Client:%s:%d:/sId:%s/> Ne peux pas envoyer de données car connexion inactive.", this.socket.getInetAddress().toString(), this.socket.getPort(), this.sessionCliente));
+            return false;
+        }
+
+        Paquet paquet = new Paquet(this.sessionCliente != null ? this.sessionCliente.getUuid() : null, uneCommande, uneDonnee);
 
         try
         {
-            rIn = (String) this.objectInputStream.readObject();
+            this.objectOutputStream.writeObject(paquet);
+            return true;
         }
         catch (IOException e)
         {
-            this.instanceMere.logger.warning("Une erreur de stream client est survenue");
-            return false;
-        }
-        catch (ClassNotFoundException e)
-        {
-            this.instanceMere.logger.warning("Impossible de reconnaitre l'objet envoyé par le client");
-            return false;
+            this.instanceMere.logger.severe(String.format("<Client:%s:%d:/sId:%s/> Ne peux pas envoyer de données car IOException '%s'.", this.socket.getInetAddress().toString(), this.socket.getPort(), this.sessionCliente, e.getMessage()));
         }
 
-        return rIn.equals(unMessageCible);
+        return false;
     }
 
     /**
-     * Envoie un message au client
-     * @param unMessage Le message à envoyer
-     * @return bool
+     * Récupère un paquet en attente de lecture sur le objectInputStream
+     * @return Paquet|null
      */
-    private boolean envoyerMessage(String unMessage)
+    private Paquet getPaquet()
     {
-        try
+        if (!this.isOnline())
         {
-            this.objectOutputStream.writeObject(unMessage);
-            objectOutputStream.flush();
-        }
-        catch (IOException e)
-        {
-            this.instanceMere.logger.warning("Une erreur de stream client est survenue");
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Récupère un objet String depuis le canal input
-     * @return String|null
-     */
-    @Nullable
-    private String getMessage()
-    {
-        String kIn;
-
-        try
-        {
-            kIn = (String) this.objectInputStream.readObject();
-        }
-        catch (IOException e)
-        {
+            this.instanceMere.logger.warning(String.format("<Client:%s:%d:/sId:%s/> Ne peux pas envoyer de données car connexion inactive.", this.socket.getInetAddress().toString(), this.socket.getPort(), this.sessionCliente));
             return null;
+        }
+
+        Paquet paquet;
+
+        try
+        {
+            paquet = (Paquet) this.objectInputStream.readObject();
+            return paquet;
+        }
+        catch (IOException e)
+        {
+            this.instanceMere.logger.severe(String.format("<Client:%s:%d:/sId:%s/> Ne peux pas recevoir de données car IOException '%s'.", this.socket.getInetAddress().toString(), this.socket.getPort(), this.sessionCliente, e.getMessage()));
         }
         catch (ClassNotFoundException e)
         {
-            return null;
+            this.instanceMere.logger.severe(String.format("<Client:%s:%d:/sId:%s/> Ne peux pas recevoir de données car ClassNotFoundException '%s'.", this.socket.getInetAddress().toString(), this.socket.getPort(), this.sessionCliente, e.getMessage()));
         }
 
-        return kIn;
+        return null;
+    }
+
+    /**
+     * Vérifie la présence d'un paquet en attente
+     * @param uneCommandeAttendue La commande que l'on attend
+     * @return bool
+     */
+    private boolean getPaquet(String uneCommandeAttendue)
+    {
+        Paquet paquet = this.getPaquet();
+        return paquet != null && paquet.getCommande().equals(uneCommandeAttendue);
     }
 
     /**
@@ -144,11 +153,13 @@ public class GestionnaireClient implements Runnable, Observer {
 
             try
             {
-                this.objectOutputStream.writeObject(this.NOTIFIE_FERMETURE);
+                this.objectOutputStream.writeObject(new Paquet(this.sessionCliente.getUuid(), this.NOTIFIE_FERMETURE, null));
 
                 this.objectInputStream.close();
                 this.objectOutputStream.close();
                 this.socket.close();
+
+                this.instanceMere.retirer(this);
             }
             catch (IOException e)
             {
@@ -168,52 +179,38 @@ public class GestionnaireClient implements Runnable, Observer {
      * Gestion de l'authentification, récupère le pseudo et les jetons d'authentifications et créer une session si match il y a.
      * @return bool
      */
-    private boolean gererAuth()
+    private boolean authentification(Paquet unPaquetAuth)
     {
-        String hash, salt, username;
-        Utilisateur utilisateur;
-
-        if (this.envoyerMessage(this.ASK_USERNAME))
+        if (unPaquetAuth == null || !unPaquetAuth.getCommande().equals(this.DEMANDE_AUTHENTIFICATION))
         {
-            username = this.getMessage();
-
-            if (username != null && this.envoyerMessage(ASK_PASSWD))
-            {
-                hash = this.getMessage();
-
-                if (hash == null)
-                {
-                    this.instanceMere.logger.warning(String.format("<Client:%s:%d> Les jetons d'authentifications ne sont pas acquis.", this.socket.getInetAddress(), this.socket.getPort()));
-                    return false;
-                }
-
-                /* Recherche d'un match */
-                try
-                {
-                    utilisateur = this.instanceMere.getUtilisateur(hash);
-                }
-                catch (NoResultException e)
-                {
-                    this.envoyerMessage(this.AUTH_ERREUR);
-                    return false;
-                }
-
-                if (utilisateur != null)
-                {
-                    this.envoyerMessage(this.AUTH_OK);
-                    this.instanceMere.logger.info(String.format("<Client:%s:%d> Authentifié en tant que '%s'.", this.socket.getInetAddress(), this.socket.getPort(), utilisateur.getPseudo()));
-                    this.envoyerMessage(this.creerSession(utilisateur).getUuid());
-                    return true;
-                }
-                else
-                {
-                    this.envoyerMessage(this.AUTH_ERREUR);
-                    return false;
-                }
-            }
-
+            this.instanceMere.logger.severe(String.format("<Client:%s:%d:/sId:%s/> Ne peux pas authentifier le client car la commande ne correspond pas.", this.socket.getInetAddress().toString(), this.socket.getPort(), this.sessionCliente));
+            return false;
         }
 
+        Utilisateur utilisateur = (Utilisateur) unPaquetAuth.getData();
+
+        /* Recherche d'un match */
+        try
+        {
+            utilisateur = this.instanceMere.getUtilisateur(utilisateur.getPseudo(), utilisateur.getSecret());
+        }
+        catch (NoResultException e)
+        {
+            this.instanceMere.logger.info(String.format("<Client:%s:%d> Les jetons d'authentification ne correspondent a aucun utilisateur.", this.socket.getInetAddress(), this.socket.getPort()));
+            return false;
+        }
+
+        if (utilisateur != null)
+        {
+            this.instanceMere.logger.info(String.format("<Client:%s:%d> Authentifié en tant que '%s'.", this.socket.getInetAddress(), this.socket.getPort(), utilisateur.getPseudo()));
+
+            this.sessionCliente = this.creerSession(utilisateur);
+            this.sendPaquet(this.AUTH_OK, this.sessionCliente.getUuid());
+
+            return true;
+        }
+
+        this.sendPaquet(this.AUTH_ERREUR, null);
         return false;
     }
 
@@ -250,37 +247,42 @@ public class GestionnaireClient implements Runnable, Observer {
     }
 
     /**
-     * Demande au client le choix de salon
-     * @return
+     * Envoie la liste des salons disponibles
+     * @return bool
      */
-    private Salon clientChoisirSalon()
+    private boolean envoyerSalons()
     {
-        List<Salon> salonsDisponible = this.instanceMere.getEtat();
-        Salon salonSelection;
+        return this.sendPaquet(this.ASK_SALONS, this.instanceMere.getEtat());
+    }
+
+    private boolean setSalon(Salon unSalon)
+    {
+        this.salon = unSalon;
+        return this.sendPaquet(this.OK, unSalon);
+    }
+
+    private boolean publierMessage(String unMessage)
+    {
+        Paquet paquet = new Paquet(this.sessionCliente.getUuid(), this.OK, unMessage);
 
         try
         {
-            this.instanceMere.logger.info(String.format("<Client:%s:%d> Envoie des salons disponibles..", this.socket.getInetAddress(), this.socket.getPort()));
-            this.objectOutputStream.writeObject(salonsDisponible);
-            salonSelection = (Salon) this.objectInputStream.readObject();
+            EntityTransaction entityTransaction = this.entityManager.getTransaction();
+            entityTransaction.begin();
+            Message message = new Message(new Date(), this.sessionCliente.getUtilisateur(), false, unMessage, this.salon);
+            this.entityManager.persist(message);
+            entityTransaction.commit();
         }
-        catch (IOException e)
+        catch (Exception e)
         {
-            this.instanceMere.logger.severe(String.format("<Client:%s:%d> Le client n'a pas pu choisir de salon '%s:%s'.", this.socket.getInetAddress(), this.socket.getPort(), this.sessionCliente.getUtilisateur().getPseudo(), this.sessionCliente.getUuid()));
-            return null;
-        }
-        catch (ClassNotFoundException e)
-        {
-            this.instanceMere.logger.severe(String.format("<Client:%s:%d> Le client n'a pas selectionné de salon valide '%s:%s'.", this.socket.getInetAddress(), this.socket.getPort(), this.sessionCliente.getUtilisateur().getPseudo(), this.sessionCliente.getUuid()));
-            return null;
+            return false;
         }
 
-        return salonSelection;
+        return true;
     }
 
     public void run() {
 
-        String rIn;
         Paquet paquetClient;
 
         try
@@ -295,19 +297,17 @@ public class GestionnaireClient implements Runnable, Observer {
         }
 
         // 1) Attendre le message HELLO et envoyer à notre tour un HELLO
-        if (!this.waitMessage(this.DEMANDE_INITIALISATION) || !this.envoyerMessage(this.DEMANDE_INITIALISATION))
+        if (!this.sendPaquet(this.DEMANDE_INITIALISATION, null) || !this.getPaquet(this.DEMANDE_INITIALISATION))
         {
             this.instanceMere.logger.warning(String.format("<Client:%s:%d> Aucune demande d'initialisation valable reçu.", this.socket.getInetAddress(), this.socket.getPort()));
             this.fermer();
             return;
         }
 
-        rIn = this.getMessage();
-
         // 2) Négocier l'authentification, Anonyme ou identifiant.
-        if (rIn == null || !rIn.equals(this.DEMANDE_AUTHENTIFICATION) || !this.gererAuth())
+        if (!this.authentification(this.getPaquet()))
         {
-            this.instanceMere.logger.warning(String.format("<Client:%s:%d> Format d'authentification non reconnue. BYE!", this.socket.getInetAddress(), this.socket.getPort()));
+            this.instanceMere.logger.warning(String.format("<Client:%s:%d> L'authentification n'a pas aboutie, BYE!", this.socket.getInetAddress(), this.socket.getPort()));
             this.fermer();
             return;
         }
@@ -323,29 +323,42 @@ public class GestionnaireClient implements Runnable, Observer {
             }
             catch (Exception e)
             {
-                this.instanceMere.logger.warning(String.format("<Client:%s:%d> Format de données reçu invalide."));
+                this.instanceMere.logger.warning(String.format("<Client:%s:%d> Fin de communication client", this.socket.getInetAddress(), this.socket.getPort()));
                 this.fermer();
                 return;
             }
 
             if (!paquetClient.getSessionUuid().equals(this.sessionCliente.getUuid()))
             {
-                this.instanceMere.logger.warning(String.format("<Client:%s:%d> Cookie érronée, impossible de vérifier l'identité du client."));
+                this.instanceMere.logger.warning(String.format("<Client:%s:%d> Cookie érronée, impossible de vérifier l'identité du client.", this.socket.getInetAddress(), this.socket.getPort()));
                 this.fermer();
                 return;
             }
 
-            if (paquetClient.getCommande().equals(this.ASK_ENTER_SALON))
+            /* Vérification de la commande */
+            if (paquetClient.getCommande().equals(this.ASK_SALONS))
             {
-                this.clientChoisirSalon();
+                if (this.envoyerSalons())
+                {
+                    this.instanceMere.logger.info(String.format("<Client:%s:%d> Envoie de la liste des salons", this.socket.getInetAddress(), this.socket.getPort()));
+                }
+                else
+                {
+                    this.instanceMere.logger.warning(String.format("<Client:%s:%d> Impossible d'émettre la liste des salons..", this.socket.getInetAddress(), this.socket.getPort()));
+                }
+            }
+            else if(paquetClient.getCommande().equals(this.ASK_ENTER_SALON))
+            {
+                Salon nouveauSalon = (Salon) paquetClient.getData();
+                this.instanceMere.logger.info(String.format("<Client:%s:%d> Passage sur le salon '%s'.", this.socket.getInetAddress(), this.socket.getPort(), nouveauSalon.getDesignation()));
+                this.setSalon(nouveauSalon);
+            }
+            else if(paquetClient.getCommande().equals(this.ASK_MESSAGE))
+            {
+                this.instanceMere.logger.info(String.format("<Client:%s:%d> Message '%s'.", this.socket.getInetAddress(), this.socket.getPort(),(String) paquetClient.getData()));
             }
 
         }
-
-        // 3) Envoyer la liste des salons disponibles
-        //this.clientChoisirSalon();
-
-        // 4) Inscrire dans les events du salon
 
     }
 
