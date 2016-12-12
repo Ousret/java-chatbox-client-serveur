@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.paint.*?>
+<?import javafx.scene.text.*?>
+
+<GridPane maxHeight="+Infinity" maxWidth="+Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="191.0" prefWidth="434.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="gui.ControllerConnexion">
+  <children>
+    <VBox maxHeight="+Infinity" maxWidth="+Infinity" minHeight="-Infinity" prefWidth="400.0" GridPane.columnIndex="1" GridPane.rowIndex="0">
+      <children>
+          <HBox alignment="BASELINE_CENTER" maxHeight="-Infinity" maxWidth="+Infinity" minHeight="-Infinity" minWidth="-Infinity" spacing="10.0">
+            <children>
+                  <Label fx:id="messageLabel" text="Adresse IP :" textAlignment="LEFT" wrapText="true">
+                  <font>
+                  <Font name="System Bold" size="13.0" />
+                  </font>
+                  </Label>
+                  <TextField fx:id="textfieldIP" prefHeight="27.0" prefWidth="133.0" />
+                  <Label fx:id="messageLabel2" text="Port :" textAlignment="LEFT" wrapText="true">
+                     <font>
+                        <Font name="System Bold" size="13.0" />
+                     </font>
+                  </Label>
+                  <TextField fx:id="textfieldPort" prefHeight="27.0" prefWidth="72.0" />
+            </children>
+               <VBox.margin>
+                  <Insets bottom="10.0" />
+               </VBox.margin>
+          </HBox>
+            <Separator prefWidth="200.0" />
+            <BorderPane prefHeight="47.0" prefWidth="400.0">
+               <left>
+                  <Label fx:id="messageLabel2111" alignment="CENTER_RIGHT" prefHeight="17.0" prefWidth="180.0" text="Pseudo :" textAlignment="LEFT" wrapText="true" BorderPane.alignment="CENTER">
+                     <font>
+                        <Font name="System Bold" size="13.0" />
+                     </font>
+                  </Label>
+               </left>
+               <center>
+                  <TextField fx:id="textfieldPseudo" maxWidth="160.0" prefHeight="27.0" prefWidth="160.0" BorderPane.alignment="CENTER" />
+               </center>
+            </BorderPane>
+            <BorderPane prefHeight="47.0" prefWidth="400.0">
+               <left>
+                  <Label fx:id="messageLabel21111" alignment="CENTER_RIGHT" prefHeight="17.0" prefWidth="180.0" text="Mot de passe :" textAlignment="LEFT" wrapText="true" BorderPane.alignment="CENTER">
+                     <font>
+                        <Font name="System Bold" size="13.0" />
+                     </font>
+                  </Label>
+               </left>
+               <center>
+                  <PasswordField fx:id="passwordfieldPW" maxWidth="160.0" minHeight="-Infinity" minWidth="-Infinity" prefHeight="27.0" prefWidth="160.0" BorderPane.alignment="CENTER">
+                     <BorderPane.margin>
+                        <Insets left="33.0" right="33.0" />
+                     </BorderPane.margin>
+                  </PasswordField>
+               </center>
+            </BorderPane>
+            <BorderPane>
+               <top>
+                  <Button fx:id="buttonConnexion" mnemonicParsing="false" text="Se connecter" BorderPane.alignment="CENTER" />
+               </top>
+            </BorderPane>
+      </children>
+    </VBox>
+  </children>
+  <columnConstraints>
+    <ColumnConstraints hgrow="NEVER" maxWidth="-Infinity" minWidth="-Infinity" />
+    <ColumnConstraints halignment="CENTER" hgrow="ALWAYS" maxWidth="+Infinity" minWidth="-Infinity" />
+  </columnConstraints>
+  <padding>
+    <Insets bottom="14.0" left="14.0" right="14.0" top="14.0" />
+  </padding>
+  <rowConstraints>
+    <RowConstraints maxHeight="Infinity" minHeight="-Infinity" prefHeight="181.0" valignment="CENTER" vgrow="ALWAYS" />
+    <RowConstraints maxHeight="0.0" minHeight="-Infinity" prefHeight="0.0" vgrow="NEVER" />
+  </rowConstraints>
+</GridPane>

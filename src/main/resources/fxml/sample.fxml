@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.paint.*?>
+<?import javafx.scene.text.*?>
+
+<VBox prefHeight="600.0" prefWidth="1080.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="gui.Controller">
+  <children>
+    <MenuBar id="menuBar" prefHeight="29.0" prefWidth="663.0" VBox.vgrow="NEVER">
+      <menus>
+        <Menu id="menuFichier" mnemonicParsing="false" text="Fichier">
+          <items>
+            <MenuItem id="menuitemConnexion" fx:id="menuitemConnexion" mnemonicParsing="false" text="Connexion" />
+            <MenuItem id="menuItemQuitter" fx:id="menuitemQuitter" mnemonicParsing="false" text="Quitter" />
+          </items>
+        </Menu>
+        <Menu id="menuEditer" mnemonicParsing="false" text="Editer">
+          <items>
+            <MenuItem id="menuItemProfile" fx:id="menuitemProfile" mnemonicParsing="false" text="Profile" />
+              <MenuItem id="menuItemNettoyer" fx:id="menuitemNettoyer" mnemonicParsing="false" text="Nettoyer chat" />
+          </items>
+        </Menu>
+      </menus>
+    </MenuBar>
+    <AnchorPane maxHeight="-1.0" maxWidth="-1.0" prefHeight="371.0" prefWidth="510.0" VBox.vgrow="ALWAYS">
+         <children>
+            <SplitPane dividerPositions="0.16326530612244897" prefHeight="371.0" prefWidth="663.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+              <items>
+                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="369.0" prefWidth="83.0" SplitPane.resizableWithParent="false">
+                     <children>
+                        <VBox prefHeight="200.0" prefWidth="100.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                           <children>
+                              <ComboBox fx:id="comboChannel" prefHeight="26.0" prefWidth="172.0">
+                                 <VBox.margin>
+                                    <Insets bottom="2.0" left="2.0" right="2.0" top="2.0" />
+                                 </VBox.margin></ComboBox>
+                              <ScrollPane prefHeight="534.0">
+                                <content>
+                                  <AnchorPane>
+                                       <children>
+                                          <TreeView fx:id="treeListeClient" prefHeight="0.0" prefWidth="0.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+                                       </children>
+                                    </AnchorPane>
+                                </content>
+                              </ScrollPane>
+                           </children>
+                        </VBox>
+                     </children>
+                  </AnchorPane>
+                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="369.0" prefWidth="577.0" SplitPane.resizableWithParent="false">
+                     <children>
+                        <SplitPane dividerPositions="0.800705467372134" orientation="VERTICAL" prefHeight="371.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                          <items>
+                            <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="100.0" prefWidth="160.0">
+                                 <children>
+                                    <ScrollPane fx:id="scrollpaneChatOutput" fitToWidth="true" prefHeight="200.0" prefWidth="200.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                      <content>
+                                        <AnchorPane>
+                                             <children>
+                                                <TextFlow fx:id="textflowChatOutput" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+                                             </children>
+                                          </AnchorPane>
+                                      </content>
+                                    </ScrollPane>
+                                 </children>
+                              </AnchorPane>
+                            <AnchorPane minHeight="75.0" minWidth="0.0" prefHeight="100.0" prefWidth="160.0">
+                                 <children>
+                                    <BorderPane layoutX="13.0" layoutY="-4.0" prefHeight="83.0" prefWidth="532.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                       <center>
+                                          <TextArea id="textChatInput" fx:id="textChatInput" prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+                                             <padding>
+                                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                             </padding>
+                                          </TextArea>
+                                       </center>
+                                       <right>
+                                          <Button id="buttonEnvoyer" fx:id="buttonEnvoyer" mnemonicParsing="false" text="Envoyer" BorderPane.alignment="CENTER">
+                                             <opaqueInsets>
+                                                <Insets />
+                                             </opaqueInsets>
+                                             <BorderPane.margin>
+                                                <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                             </BorderPane.margin>
+                                          </Button>
+                                       </right>
+                                    </BorderPane>
+                                 </children>
+                              </AnchorPane>
+                          </items>
+                        </SplitPane>
+                     </children>
+                  </AnchorPane>
+              </items>
+            </SplitPane>
+         </children>
+    </AnchorPane>
+  </children>
+</VBox>

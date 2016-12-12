@@ -24,7 +24,7 @@ public class Serveur extends Observable implements Runnable {
 
     private ArrayList<GestionnaireClient> clients;
 
-    public Thread thread;
+    private Thread thread;
 
     @PersistenceUnit(unitName="Ousret")
     private EntityManagerFactory entityManagerFactory;
@@ -32,6 +32,9 @@ public class Serveur extends Observable implements Runnable {
     @PersistenceContext(unitName="Ousret")
     private EntityManager entityManager;
 
+    /**
+     * Création d'une instance serveur
+     */
     private Serveur()
     {
         this.entityManagerFactory = Persistence.createEntityManagerFactory("Ousret");
@@ -59,6 +62,10 @@ public class Serveur extends Observable implements Runnable {
                 .getSingleResult();
     }
 
+    /**
+     * Principe du pattern Singleton
+     * @return L'unique instance serveur executé sur la JVM
+     */
     public static Serveur getInstance()
     {
         if (Serveur.instanceUnique != null)
@@ -70,6 +77,13 @@ public class Serveur extends Observable implements Runnable {
         }
     }
 
+    public void join() throws InterruptedException { this.thread.join(); }
+
+    /**
+     * Supprime un client de la liste des clients
+     * @param unClient Le client cible
+     * @return Vrai si le client a été retiré
+     */
     public boolean retirer(GestionnaireClient unClient)
     {
         return this.clients.remove(unClient);
@@ -110,6 +124,10 @@ public class Serveur extends Observable implements Runnable {
 
     }
 
+    /**
+     * Récupère la liste des salons depuis la base de données
+     * @return La liste des salons
+     */
     public List<Salon> getEtat()
     {
         return this.entityManager.createQuery("SELECT s FROM salon s", Salon.class).getResultList();
@@ -121,7 +139,7 @@ public class Serveur extends Observable implements Runnable {
 
         try
         {
-            kServ.thread.join();
+            kServ.join();
         }catch (InterruptedException e)
         {
             System.out.println(e.getMessage());

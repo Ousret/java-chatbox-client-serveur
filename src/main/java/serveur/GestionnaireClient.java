@@ -14,28 +14,6 @@ import java.util.*;
 
 public class GestionnaireClient implements Runnable, Observer {
 
-    private final String DEMANDE_INITIALISATION = "HELLO";
-
-    private final String NOTIFIE_FERMETURE = "BYE";
-
-    private final String DEMANDE_AUTHENTIFICATION = "AUTH";
-    private final String DEMANDE_ANONYME = "ANONYMOUS";
-
-    private final String AUTH_ERREUR = "NOMATCH";
-    private final String AUTH_OK = "MATCH";
-
-    private final String ASK_USERNAME = "ASK_USERNAME";
-    private final String ASK_PASSWD = "ASK_PASSWD";
-
-    private final String ASK_ENTER_SALON = "ASK_ENTER_SALON";
-
-    private final String ASK_SALONS = "ASK_SALONS";
-
-    private final String ASK_MESSAGE = "ASK_MESSAGE";
-
-    private final String OK = "OK";
-    private final String KO = "KO";
-
     private Socket socket;
     private Serveur instanceMere;
 
@@ -67,8 +45,17 @@ public class GestionnaireClient implements Runnable, Observer {
         this.currentThread.start();
     }
 
-    private boolean isOnline() { return this.socket.isConnected(); }
-    private boolean isAuthenticated() { return this.isOnline() && this.sessionCliente != null; }
+    /**
+     * Vérifie si le client est encore relié au serveur
+     * @return Vrai si c'est le cas
+     */
+    public boolean isOnline() { return this.socket.isConnected(); }
+
+    /**
+     * Vérifie si le client est authentifié auprès du serveur
+     * @return Vrai si c'est le cas
+     */
+    public boolean isAuthenticated() { return this.isOnline() && this.sessionCliente != null; }
 
     /**
      * Envoie un paquet d'instruction vers le client
@@ -153,7 +140,7 @@ public class GestionnaireClient implements Runnable, Observer {
 
             try
             {
-                this.objectOutputStream.writeObject(new Paquet(this.sessionCliente.getUuid(), this.NOTIFIE_FERMETURE, null));
+                this.objectOutputStream.writeObject(new Paquet(this.sessionCliente.getUuid(), Paquet.NOTIFIE_FERMETURE, null));
 
                 this.objectInputStream.close();
                 this.objectOutputStream.close();
@@ -181,7 +168,7 @@ public class GestionnaireClient implements Runnable, Observer {
      */
     private boolean authentification(Paquet unPaquetAuth)
     {
-        if (unPaquetAuth == null || !unPaquetAuth.getCommande().equals(this.DEMANDE_AUTHENTIFICATION))
+        if (unPaquetAuth == null || !unPaquetAuth.getCommande().equals(Paquet.DEMANDE_AUTHENTIFICATION))
         {
             this.instanceMere.logger.severe(String.format("<Client:%s:%d:/sId:%s/> Ne peux pas authentifier le client car la commande ne correspond pas.", this.socket.getInetAddress().toString(), this.socket.getPort(), this.sessionCliente));
             return false;
@@ -205,12 +192,12 @@ public class GestionnaireClient implements Runnable, Observer {
             this.instanceMere.logger.info(String.format("<Client:%s:%d> Authentifié en tant que '%s'.", this.socket.getInetAddress(), this.socket.getPort(), utilisateur.getPseudo()));
 
             this.sessionCliente = this.creerSession(utilisateur);
-            this.sendPaquet(this.AUTH_OK, this.sessionCliente.getUuid());
+            this.sendPaquet(Paquet.AUTH_OK, this.sessionCliente.getUuid());
 
             return true;
         }
 
-        this.sendPaquet(this.AUTH_ERREUR, null);
+        this.sendPaquet(Paquet.AUTH_ERREUR, null);
         return false;
     }
 
@@ -252,19 +239,27 @@ public class GestionnaireClient implements Runnable, Observer {
      */
     private boolean envoyerSalons()
     {
-        return this.sendPaquet(this.ASK_SALONS, this.instanceMere.getEtat());
+        return this.sendPaquet(Paquet.ASK_SALONS, this.instanceMere.getEtat());
     }
 
+    /**
+     * Change le salon sur lequel le client est assigné
+     * @param unSalon Le salon cible
+     * @return Vrai si le salon a été changé
+     */
     private boolean setSalon(Salon unSalon)
     {
         this.salon = unSalon;
-        return this.sendPaquet(this.OK, unSalon);
+        return this.sendPaquet(Paquet.OK, unSalon);
     }
 
+    /**
+     * Publie un message sur le salon
+     * @param unMessage Le message à publier
+     * @return Vrai si le message est publié
+     */
     private boolean publierMessage(String unMessage)
     {
-        Paquet paquet = new Paquet(this.sessionCliente.getUuid(), this.OK, unMessage);
-
         try
         {
             EntityTransaction entityTransaction = this.entityManager.getTransaction();
@@ -278,7 +273,7 @@ public class GestionnaireClient implements Runnable, Observer {
             return false;
         }
 
-        return true;
+        return this.sendPaquet(Paquet.OK, unMessage);
     }
 
     public void run() {
@@ -297,7 +292,7 @@ public class GestionnaireClient implements Runnable, Observer {
         }
 
         // 1) Attendre le message HELLO et envoyer à notre tour un HELLO
-        if (!this.sendPaquet(this.DEMANDE_INITIALISATION, null) || !this.getPaquet(this.DEMANDE_INITIALISATION))
+        if (!this.sendPaquet(Paquet.DEMANDE_INITIALISATION, null) || !this.getPaquet(Paquet.DEMANDE_INITIALISATION))
         {
             this.instanceMere.logger.warning(String.format("<Client:%s:%d> Aucune demande d'initialisation valable reçu.", this.socket.getInetAddress(), this.socket.getPort()));
             this.fermer();
@@ -314,6 +309,7 @@ public class GestionnaireClient implements Runnable, Observer {
 
         this.instanceMere.logger.info(String.format("<Client:%s:%d> Début de l'écoute client..", this.socket.getInetAddress(), this.socket.getPort()));
 
+        // Boucle d'écoute du client
         for(;;)
         {
 
@@ -336,7 +332,7 @@ public class GestionnaireClient implements Runnable, Observer {
             }
 
             /* Vérification de la commande */
-            if (paquetClient.getCommande().equals(this.ASK_SALONS))
+            if (paquetClient.getCommande().equals(Paquet.ASK_SALONS))
             {
                 if (this.envoyerSalons())
                 {
@@ -347,13 +343,13 @@ public class GestionnaireClient implements Runnable, Observer {
                     this.instanceMere.logger.warning(String.format("<Client:%s:%d> Impossible d'émettre la liste des salons..", this.socket.getInetAddress(), this.socket.getPort()));
                 }
             }
-            else if(paquetClient.getCommande().equals(this.ASK_ENTER_SALON))
+            else if(paquetClient.getCommande().equals(Paquet.ASK_ENTER_SALON))
             {
                 Salon nouveauSalon = (Salon) paquetClient.getData();
                 this.instanceMere.logger.info(String.format("<Client:%s:%d> Passage sur le salon '%s'.", this.socket.getInetAddress(), this.socket.getPort(), nouveauSalon.getDesignation()));
                 this.setSalon(nouveauSalon);
             }
-            else if(paquetClient.getCommande().equals(this.ASK_MESSAGE))
+            else if(paquetClient.getCommande().equals(Paquet.ASK_MESSAGE))
             {
                 this.instanceMere.logger.info(String.format("<Client:%s:%d> Message '%s'.", this.socket.getInetAddress(), this.socket.getPort(),(String) paquetClient.getData()));
             }

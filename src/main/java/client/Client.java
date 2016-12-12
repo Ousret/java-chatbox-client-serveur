@@ -7,6 +7,8 @@ import javax.net.SocketFactory;
 import java.io.*;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Observable;
 import java.util.logging.Logger;
@@ -14,27 +16,6 @@ import java.util.logging.Logger;
 import java.security.*;
 
 public class Client extends Observable implements Runnable {
-
-    private final String DEMANDE_INITIALISATION = "HELLO";
-
-    private final String NOTIFIE_FERMETURE = "BYE";
-
-    private final String DEMANDE_AUTHENTIFICATION = "AUTH";
-    private final String DEMANDE_ANONYME = "ANONYMOUS";
-
-    private final String AUTH_ERREUR = "NOMATCH";
-    private final String AUTH_OK = "MATCH";
-
-    private final String ASK_USERNAME = "ASK_USERNAME";
-    private final String ASK_PASSWD = "ASK_PASSWD";
-
-    private final String ASK_ENTER_SALON = "ASK_ENTER_SALON";
-    private final String ASK_SALONS = "ASK_SALONS";
-
-    private final String ASK_MESSAGE = "ASK_MESSAGE";
-
-    private final String OK = "OK";
-    private final String KO = "KO";
 
     public final Logger logger = Logger.getLogger(Client.class.getName());
 
@@ -50,9 +31,18 @@ public class Client extends Observable implements Runnable {
     private ObjectOutputStream objectOutputStream;
     private ObjectInputStream objectInputStream;
 
+    private volatile LinkedList<Paquet> paquetsAttente;
+
     private Thread thread;
 
-    public Client(String uneAdresseIP, Integer unNumeroPort, String unIdentifiant, String unePhraseSecrete)
+    public Client()
+    {
+        this.paquetsAttente = new LinkedList<Paquet>();
+        this.thread = new Thread(this);
+        this.thread.setDaemon(true);
+    }
+
+    private Client(String uneAdresseIP, Integer unNumeroPort, String unIdentifiant, String unePhraseSecrete)
     {
 
         this.identifiant = unIdentifiant;
@@ -62,7 +52,6 @@ public class Client extends Observable implements Runnable {
         try
         {
             this.phraseSecrete = Client.hash256(unePhraseSecrete);
-            this.logger.info(this.phraseSecrete);
         }
         catch (NoSuchAlgorithmException e)
         {
@@ -75,9 +64,22 @@ public class Client extends Observable implements Runnable {
 
     }
 
+    /**
+     * Récupère l'identifiant en cours
+     * @return String
+     */
     public String getIdentifiant() { return this.identifiant; }
 
     public void join() throws InterruptedException { this.thread.join(); }
+
+    /**
+     * Récupère le paquet suivant
+     * @return Paquet
+     */
+    public Paquet nextPaquet()
+    {
+        return this.paquetsAttente.size() > 0 ? this.paquetsAttente.pop() : null;
+    }
 
     /**
      * Envoie un paquet d'instruction vers le client
@@ -150,13 +152,22 @@ public class Client extends Observable implements Runnable {
         return paquet != null && paquet.getCommande().equals(uneCommandeAttendue);
     }
 
-    private boolean connecter()
+    /**
+     * Établir une connexion au serveur
+     * @param uneAdresseIP L'adresse IP cible
+     * @param unPortDistant Le port distant
+     * @return bool
+     */
+    public boolean connecter(String uneAdresseIP, Integer unPortDistant)
     {
         try {
 
-            this.socket = factory.createSocket(this.adresseIp, this.port);
+            this.socket = factory.createSocket(uneAdresseIP, unPortDistant);
             this.objectOutputStream = new ObjectOutputStream(this.socket.getOutputStream());
             this.objectInputStream = new ObjectInputStream(this.socket.getInputStream());
+
+            this.adresseIp = uneAdresseIP;
+            this.port = unPortDistant;
 
             return true;
 
@@ -172,101 +183,12 @@ public class Client extends Observable implements Runnable {
     }
 
     /**
-     * Vérifie que le client nous envoie bien le message spécifié
-     * @param unMessageCible Le message à attendre
-     * @return bool
+     * Négocie l'authentification avec le serveur et sauvegarde la clé de session automatiquement
+     * @param unIdentifiant Identifiant utilisateur ou pseudo
+     * @param unePhraseSecrete Le mot de passe / phrase secrete
+     * @return Vrai si le serveur à répondu positivement
      */
-    @Deprecated
-    private boolean waitMessage(String unMessageCible)
-    {
-        if (!this.isOnline())
-        {
-            this.logger.warning("Il faut au préalable avoir ouvert une connexion pour recevoir une commande brute.");
-            return false;
-        }
-
-        String rIn;
-
-        try
-        {
-            rIn = (String) this.objectInputStream.readObject();
-        }
-        catch (IOException e)
-        {
-            this.logger.warning("Une erreur de stream client est survenue");
-            return false;
-        }
-        catch (ClassNotFoundException e)
-        {
-            this.logger.warning("Impossible de reconnaitre l'objet envoyé par le client");
-            return false;
-        }
-
-        return rIn.equals(unMessageCible);
-    }
-
-    /**
-     * Attendre un message au format String
-     * @return String|null
-     */
-    @Deprecated
-    private String waitMessage()
-    {
-        if (!this.isOnline())
-        {
-            this.logger.warning("Il faut au préalable avoir ouvert une connexion pour recevoir une commande brute.");
-            return "";
-        }
-
-        String rIn;
-
-        try
-        {
-            rIn = (String) this.objectInputStream.readObject();
-        }
-        catch (IOException e)
-        {
-            this.logger.warning("Une erreur de stream client est survenue");
-            return null;
-        }
-        catch (ClassNotFoundException e)
-        {
-            this.logger.warning("Impossible de reconnaitre l'objet envoyé par le client");
-            return null;
-        }
-
-        return rIn;
-    }
-
-    /**
-     * Envoie un message au client (Commande String)
-     * @param unMessage Le message à envoyer
-     * @return bool
-     */
-    @Deprecated
-    private boolean envoyerMessage(String unMessage)
-    {
-        if (!this.isOnline())
-        {
-            this.logger.warning("Il faut au préalable avoir ouvert une connexion pour envoyer une commande brute.");
-            return false;
-        }
-
-        try
-        {
-            this.objectOutputStream.writeObject(unMessage);
-            objectOutputStream.flush();
-        }
-        catch (IOException e)
-        {
-            this.logger.warning("Une erreur de stream client est survenue");
-            return false;
-        }
-
-        return true;
-    }
-
-    private boolean authentification()
+    public boolean authentification(String unIdentifiant, String unePhraseSecrete)
     {
         if (this.isAuthenticated())
         {
@@ -276,7 +198,7 @@ public class Client extends Observable implements Runnable {
 
         this.logger.info("Début de la procedure d'authentification.");
 
-        if (!this.sendPaquet(this.DEMANDE_INITIALISATION, null) || !this.getPaquet(this.DEMANDE_INITIALISATION))
+        if (!this.sendPaquet(Paquet.DEMANDE_INITIALISATION, null) || !this.getPaquet(Paquet.DEMANDE_INITIALISATION))
         {
             this.logger.severe("Le serveur ne répond pas à la demande HELLO. Échec critique..");
             return false;
@@ -284,19 +206,30 @@ public class Client extends Observable implements Runnable {
 
         this.logger.info("Demande au serveur l'authentification.");
 
-        if (this.sendPaquet(this.DEMANDE_AUTHENTIFICATION, new Utilisateur(this.identifiant, null, this.phraseSecrete)))
+        try
         {
+            this.phraseSecrete = Client.hash256(unePhraseSecrete);
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
 
+        if (this.sendPaquet(Paquet.DEMANDE_AUTHENTIFICATION, new Utilisateur(unIdentifiant, null, this.phraseSecrete)))
+        {
             Paquet authRes = this.getPaquet();
 
-            if (authRes != null && authRes.getCommande().equals(this.AUTH_OK))
+            if (authRes != null && authRes.getCommande().equals(Paquet.AUTH_OK))
             {
+                this.identifiant = unIdentifiant;
                 this.logger.info("Identifiants reconnus par le serveur, en attente de récuperer la session id..");
                 this.sessionUuid = (String) authRes.getData();
 
                 if (this.sessionUuid != null)
                 {
                     this.logger.info(String.format("Identifiant de session: %s", this.sessionUuid));
+                    this.thread.start();
+
                     return true;
                 }
                 else
@@ -318,6 +251,10 @@ public class Client extends Observable implements Runnable {
 
     }
 
+    /**
+     * Récupère la liste des salons depuis le serveur
+     * @return La liste des salons disponibles
+     */
     public List<Salon> getSalons()
     {
         if (!this.isAuthenticated())
@@ -326,15 +263,13 @@ public class Client extends Observable implements Runnable {
             return null;
         }
 
-        Paquet paquet = new Paquet(this.sessionUuid, this.ASK_SALONS, null);
-
-        if (!this.sendPaquet(this.ASK_SALONS, null))
+        if (!this.sendPaquet(Paquet.ASK_SALONS, null))
         {
             this.logger.severe("La demande de liste salon n'a pas aboutie.");
             return null;
         }
 
-        paquet = this.getPaquet();
+        Paquet paquet = this.getPaquet();
 
         if (paquet != null)
         {
@@ -357,13 +292,13 @@ public class Client extends Observable implements Runnable {
             return false;
         }
 
-        if (!this.sendPaquet(this.ASK_ENTER_SALON, unSalon))
+        if (!this.sendPaquet(Paquet.ASK_ENTER_SALON, unSalon))
         {
             this.logger.warning("Erreur dans la demande de changement de salon");
             return false;
         }
 
-        if (this.getPaquet(this.OK))
+        if (this.getPaquet(Paquet.OK))
         {
             this.salon = unSalon;
             return true;
@@ -372,8 +307,22 @@ public class Client extends Observable implements Runnable {
         return false;
     }
 
-    public boolean isOnline() { return this.socket.isConnected(); }
+    /**
+     * Vérifie si la connexion est établie
+     * @return bool
+     */
+    public boolean isOnline() { return this.socket != null && this.socket.isConnected(); }
+
+    /**
+     * Vérifie si le client est authentifié
+     * @return bool
+     */
     public boolean isAuthenticated() { return this.isOnline() && this.sessionUuid != null;}
+
+    /**
+     * Récupère le salon en cours.
+     * @return Salon
+     */
     public Salon getSalon() { return this.salon; }
 
     /**
@@ -393,55 +342,33 @@ public class Client extends Observable implements Runnable {
             return false;
         }
 
-        return this.sendPaquet(this.ASK_MESSAGE, unMessage);
+        return this.sendPaquet(Paquet.ASK_MESSAGE, unMessage);
     }
 
     public void run() {
-
-        this.logger.info("Lancement du client..");
-
-        /* 1) Connexion */
-        if (!this.connecter())
-        {
-            this.logger.severe("Impossible d'établir une connexion au serveur");
-            return;
-        }
-
-        /* 2) Authentification */
-        if (!this.authentification())
-        {
-            this.logger.severe("Authentification échouée.");
-            return;
-        }
-
-        List<Salon> salons = this.getSalons();
-
-        this.logger.info(salons.toString());
-
-        if (this.setSalon(salons.get(0)))
-        {
-            this.logger.info(String.format("Passage vers le salon '%s'.", salons.get(0).getDesignation()));
-            this.nouveauMessage("Salut les enfants!!!");
-            this.nouveauMessage("Comment allez-vous ?");
-        }
-
         for (;;)
         {
-            try
-            {
-                Thread.sleep(100);
-            }
-            catch (Exception e)
-            {
-                continue;
-            }
+            Paquet paquet = this.getPaquet();
+            if (paquet == null) break;
+            this.logger.info(String.format("<Serveur> Requête '%s'.", paquet.getCommande()));
+            this.paquetsAttente.push(paquet);
+            this.setChanged();
+            this.notifyObservers(paquet);
         }
-
     }
 
     public static void main(String[] args)
     {
-        Client kClient = new Client("127.0.0.1", 3307, "Ousret", "azerty");
+        Client kClient = new Client(); //"127.0.0.1", 3307, "Ousret", "azerty"
+
+        if (kClient.connecter("127.0.0.1", 3307))
+        {
+            if (kClient.authentification("Ousret", "azerty"))
+            {
+                kClient.setSalon(kClient.getSalons().get(0));
+                kClient.nouveauMessage("Hello world!");
+            }
+        }
 
         try
         {
@@ -454,12 +381,23 @@ public class Client extends Observable implements Runnable {
 
     }
 
+    /**
+     * Calcule le hash SHA256 d'une chaîne de caractères
+     * @param data La chaîne de caractère dont le hash doit être calculée
+     * @return Le hash SHA256 sous forme de String
+     * @throws NoSuchAlgorithmException Si la JVM ne dispose pas de l'algorithme de hashage
+     */
     public static String hash256(String data) throws NoSuchAlgorithmException {
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         md.update(data.getBytes());
         return bytesToHex(md.digest());
     }
 
+    /**
+     * Transforme une suite de byte en une chaîne de caractères (RAW: Affichage hexadécimale)
+     * @param bytes La suite de byte
+     * @return La suite hexadécimale sous forme String
+     */
     private static String bytesToHex(byte[] bytes) {
         StringBuffer result = new StringBuffer();
         for (byte byt : bytes) result.append(Integer.toString((byt & 0xff) + 0x100, 16).substring(1));
