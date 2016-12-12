@@ -37,6 +37,11 @@ public class Utilisateur implements Serializable {
         this.secret = unHashSecret;
     }
 
+    public boolean equals(Object aNoTher)
+    {
+        return (aNoTher instanceof Utilisateur) && this.getId().equals(((Utilisateur)aNoTher).getId());
+    }
+
     public Integer getId() { return this.id; }
     public String getPseudo() { return this.pseudo; }
     public String getSecret() { return this.secret; }
@@ -44,5 +49,10 @@ public class Utilisateur implements Serializable {
 
     public Set<Message> getMessages() {
         return messages;
+    }
+
+    public String toString()
+    {
+        return this.getPseudo();
     }
 }

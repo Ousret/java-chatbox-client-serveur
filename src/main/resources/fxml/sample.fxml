@@ -38,11 +38,11 @@
                                  <VBox.margin>
                                     <Insets bottom="2.0" left="2.0" right="2.0" top="2.0" />
                                  </VBox.margin></ComboBox>
-                              <ScrollPane prefHeight="534.0">
+                              <ScrollPane fx:id="scrollPaneBS" prefHeight="534.0">
                                 <content>
                                   <AnchorPane>
                                        <children>
-                                          <TreeView fx:id="treeListeClient" prefHeight="0.0" prefWidth="0.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+                                          <ListView fx:id="treeListeClient" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
                                        </children>
                                     </AnchorPane>
                                 </content>

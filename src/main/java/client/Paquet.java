@@ -18,8 +18,13 @@ public class Paquet implements Serializable {
 
     public static final String ASK_ENTER_SALON = "ASK_ENTER_SALON";
     public static final String ASK_SALONS = "ASK_SALONS";
+    public static final String ASK_SALON_USERS = "ASK_SALON_USERS";
 
     public static final String ASK_MESSAGE = "ASK_MESSAGE";
+
+    public static final String NOUVEAU_MESSAGE = "NOUVEAU_MESSAGE";
+    public static final String SORTIE_UTILISATEUR = "SORTIE_UTILISATEUR";
+    public static final String ENTRER_UTILISATEUR = "ENTRER_UTILISATEUR";
 
     public static final String OK = "OK";
     public static final String KO = "KO";

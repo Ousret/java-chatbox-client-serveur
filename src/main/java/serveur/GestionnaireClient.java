@@ -45,6 +45,17 @@ public class GestionnaireClient implements Runnable, Observer {
         this.currentThread.start();
     }
 
+    public Salon getSalon() { return this.salon; }
+
+    /**
+     * Récupère l'utilisateur courant de ce thread
+     * @return Utilisateur | null
+     */
+    public Utilisateur getUtilisateur()
+    {
+        return this.isAuthenticated() ? this.sessionCliente.getUtilisateur() : null;
+    }
+
     /**
      * Vérifie si le client est encore relié au serveur
      * @return Vrai si c'est le cas
@@ -239,7 +250,16 @@ public class GestionnaireClient implements Runnable, Observer {
      */
     private boolean envoyerSalons()
     {
-        return this.sendPaquet(Paquet.ASK_SALONS, this.instanceMere.getEtat());
+        return this.sendPaquet(Paquet.ASK_SALONS, this.instanceMere.getSalons());
+    }
+
+    /**
+     * Envoie la liste des utilisateurs
+     * @return Vrai si la liste a été envoyé
+     */
+    private boolean envoyerSalonUtilisateurs()
+    {
+        return this.sendPaquet(Paquet.ASK_SALON_USERS, this.instanceMere.getSalonUtilisateurs(this.getSalon()));
     }
 
     /**
@@ -260,20 +280,14 @@ public class GestionnaireClient implements Runnable, Observer {
      */
     private boolean publierMessage(String unMessage)
     {
-        try
+
+        if (!this.isAuthenticated())
         {
-            EntityTransaction entityTransaction = this.entityManager.getTransaction();
-            entityTransaction.begin();
-            Message message = new Message(new Date(), this.sessionCliente.getUtilisateur(), false, unMessage, this.salon);
-            this.entityManager.persist(message);
-            entityTransaction.commit();
-        }
-        catch (Exception e)
-        {
+            this.instanceMere.logger.warning(String.format("<Client:%s:%d> Impossible de publier le message '%s' (anonyme)", socket.getInetAddress(), socket.getPort()));
             return false;
         }
 
-        return this.sendPaquet(Paquet.OK, unMessage);
+        return this.instanceMere.publierMessage(this.getUtilisateur(), this.salon, unMessage) && this.sendPaquet(Paquet.OK, unMessage);
     }
 
     public void run() {
@@ -352,6 +366,18 @@ public class GestionnaireClient implements Runnable, Observer {
             else if(paquetClient.getCommande().equals(Paquet.ASK_MESSAGE))
             {
                 this.instanceMere.logger.info(String.format("<Client:%s:%d> Message '%s'.", this.socket.getInetAddress(), this.socket.getPort(),(String) paquetClient.getData()));
+                if (!this.publierMessage((String) paquetClient.getData()))
+                {
+                    this.instanceMere.logger.warning(String.format("<Client:%s:%d> Message non publié :: '%s'.", this.socket.getInetAddress(), this.socket.getPort(),(String) paquetClient.getData()));
+                }
+            }
+            else if(paquetClient.getCommande().equals(Paquet.ASK_SALON_USERS))
+            {
+                this.instanceMere.logger.warning(String.format("<Client:%s:%d> Envoie la liste des utilisateurs du salon..", this.socket.getInetAddress(), this.socket.getPort()));
+                if (!this.envoyerSalonUtilisateurs())
+                {
+                    this.instanceMere.logger.warning(String.format("<Client:%s:%d> Impossible de transmettre la liste des utilisateurs du salon", this.socket.getInetAddress(), this.socket.getPort()));
+                }
             }
 
         }
@@ -359,6 +385,20 @@ public class GestionnaireClient implements Runnable, Observer {
     }
 
     public void update(Observable o, Object arg) {
+        Paquet paquet = (Paquet) arg;
 
+        if (paquet.getCommande().equals(Paquet.NOUVEAU_MESSAGE))
+        {
+            Message message = (Message) paquet.getData();
+
+            if (!message.getAuteur().equals(this.getUtilisateur()) && this.salon.equals(message.getSalon()))
+            {
+                this.sendPaquet(Paquet.NOUVEAU_MESSAGE, message);
+            }
+        }
+        else if(paquet.getCommande().equals(Paquet.SORTIE_UTILISATEUR))
+        {
+            this.sendPaquet(Paquet.SORTIE_UTILISATEUR, paquet.getData());
+        }
     }
 }

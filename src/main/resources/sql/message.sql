@@ -4,7 +4,7 @@ CREATE TABLE message
     id SERIAL PRIMARY KEY,
     dateCreation DATE,
     utilisateur_id INTEGER REFERENCES utilisateur(id),
-    suspendu BOOLEAN,
+    suspendre BOOLEAN,
     message VARCHAR(255),
     salon_id INTEGER REFERENCES salon(id)
 );

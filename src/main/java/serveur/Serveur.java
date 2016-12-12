@@ -1,5 +1,7 @@
 package serveur;
 
+import client.Paquet;
+import model.Message;
 import model.Salon;
 import model.Utilisateur;
 
@@ -10,6 +12,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class Serveur extends Observable implements Runnable {
 
@@ -86,7 +89,40 @@ public class Serveur extends Observable implements Runnable {
      */
     public boolean retirer(GestionnaireClient unClient)
     {
+        this.deleteObserver(unClient);
+        this.setChanged();
+        this.notifyObservers(new Paquet(null, Paquet.SORTIE_UTILISATEUR, unClient.getUtilisateur()));
         return this.clients.remove(unClient);
+    }
+
+    /**
+     * Publication d'un message dans la base de données et notification aux utilisateurs
+     * @param utilisateur L'utilisateur concernée
+     * @param salon Le salon concernée
+     * @param unMessage Le message à publier
+     * @return Vrai si le message a été publié
+     */
+    public boolean publierMessage(Utilisateur utilisateur, Salon salon, String unMessage)
+    {
+        Message nouveauMessage;
+
+        try
+        {
+            this.logger.info(String.format("<Message> Publication d'un message de '%s':'%s' :: '%s'", utilisateur.getPseudo(), salon.getDesignation(), unMessage));
+            EntityTransaction entityTransaction = this.entityManager.getTransaction();
+            entityTransaction.begin();
+            nouveauMessage = new Message(new Date(), utilisateur, false, unMessage, salon);
+            this.entityManager.persist(nouveauMessage);
+            entityTransaction.commit();
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
+
+        this.setChanged();
+        this.notifyObservers(new Paquet(null, Paquet.NOUVEAU_MESSAGE, nouveauMessage));
+        return true;
     }
 
     public void run() {
@@ -128,9 +164,19 @@ public class Serveur extends Observable implements Runnable {
      * Récupère la liste des salons depuis la base de données
      * @return La liste des salons
      */
-    public List<Salon> getEtat()
+    public List<Salon> getSalons()
     {
         return this.entityManager.createQuery("SELECT s FROM salon s", Salon.class).getResultList();
+    }
+
+    /**
+     * Récupère la liste des utilisateurs d'un salon donnée
+     * @param salon Le salon concerné
+     * @return La liste des utilisateurs du salon
+     */
+    public List<Utilisateur> getSalonUtilisateurs(Salon salon)
+    {
+        return this.clients.stream().filter( c -> c.getSalon().equals(salon)).map(c -> c.getUtilisateur()).collect(Collectors.toList());
     }
 
     public static void main(String[] args)

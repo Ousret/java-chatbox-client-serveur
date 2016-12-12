@@ -43,6 +43,11 @@ public class Salon implements Serializable {
         this.connectes = uneListeConnectes;
     }
 
+    public boolean equals(Object aNoTher)
+    {
+        return (aNoTher instanceof Salon) && this.getId().equals(((Salon)aNoTher).getId());
+    }
+
     public Integer getId() { return this.id; }
 
     public Utilisateur getProprietaire() {

@@ -70,7 +70,25 @@ public class Client extends Observable implements Runnable {
      */
     public String getIdentifiant() { return this.identifiant; }
 
-    public void join() throws InterruptedException { this.thread.join(); }
+    /**
+     * Essaie d'attendre la fin du processus d'écoute
+     * @throws InterruptedException NoFuckingIdea
+     */
+    public void attendre() throws InterruptedException { this.thread.join(); }
+
+    /**
+     * Lance la procédure d'écoute
+     */
+    public void ecoute() { this.thread.start(); }
+
+    /**
+     * Demande la fermeture de la connexion à l'amiable
+     * @return Vrai si la demande s'est bien passé
+     */
+    public boolean fermer()
+    {
+        return this.isAuthenticated() && this.sendPaquet(Paquet.NOTIFIE_FERMETURE, null);
+    }
 
     /**
      * Récupère le paquet suivant
@@ -228,8 +246,6 @@ public class Client extends Observable implements Runnable {
                 if (this.sessionUuid != null)
                 {
                     this.logger.info(String.format("Identifiant de session: %s", this.sessionUuid));
-                    this.thread.start();
-
                     return true;
                 }
                 else
@@ -273,7 +289,31 @@ public class Client extends Observable implements Runnable {
 
         if (paquet != null)
         {
-            return (List<model.Salon>) paquet.getData();
+            return (List) paquet.getData();
+        }
+
+        return null;
+    }
+
+    public List<Utilisateur> getSalonUtilisateurs()
+    {
+        if (!this.isAuthenticated() || this.getSalon() == null)
+        {
+            this.logger.warning("Ne peux pas demander la liste des utilisateurs car hors ligne ou pas de salon");
+            return null;
+        }
+
+        if (!this.sendPaquet(Paquet.ASK_SALON_USERS, null))
+        {
+            this.logger.severe("La demande de liste des utilisateurs salon n'a pas aboutie.");
+            return null;
+        }
+
+        Paquet paquet = this.getPaquet();
+
+        if (paquet != null)
+        {
+            return (List<Utilisateur>) paquet.getData();
         }
 
         return null;
@@ -350,7 +390,13 @@ public class Client extends Observable implements Runnable {
         {
             Paquet paquet = this.getPaquet();
             if (paquet == null) break;
-            this.logger.info(String.format("<Serveur> Requête '%s'.", paquet.getCommande()));
+
+            if (paquet.getCommande().equals(Paquet.NOTIFIE_FERMETURE))
+            {
+                this.logger.info(String.format("<Serveur> Requête '%s'.", paquet.getCommande()));
+                break;
+            }
+
             this.paquetsAttente.push(paquet);
             this.setChanged();
             this.notifyObservers(paquet);
@@ -359,7 +405,7 @@ public class Client extends Observable implements Runnable {
 
     public static void main(String[] args)
     {
-        Client kClient = new Client(); //"127.0.0.1", 3307, "Ousret", "azerty"
+        Client kClient = new Client();
 
         if (kClient.connecter("127.0.0.1", 3307))
         {
@@ -372,7 +418,7 @@ public class Client extends Observable implements Runnable {
 
         try
         {
-            kClient.join();
+            kClient.attendre();
         }
         catch (Exception e)
         {
