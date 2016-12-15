@@ -44,4 +44,9 @@ public class SessionCliente implements Serializable {
     public Date getDebutSession() {
         return debutSession;
     }
+
+    public String toString()
+    {
+        return String.format("<%s::%s>", this.getUtilisateur().getPseudo(), this.getUuid());
+    }
 }

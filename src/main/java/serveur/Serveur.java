@@ -3,6 +3,7 @@ package serveur;
 import client.Paquet;
 import model.Message;
 import model.Salon;
+import model.SessionCliente;
 import model.Utilisateur;
 
 import javax.net.ServerSocketFactory;
@@ -148,7 +149,7 @@ public class Serveur extends Observable implements Runnable {
             try
             {
                 Socket nouveauClient = this.serverSocket.accept();
-                this.logger.info(String.format("<serveur.Serveur:%s:%d> Négociation client", nouveauClient.getInetAddress(), nouveauClient.getPort()));
+                this.logger.info(String.format("<Serveur:%s:%d> Négociation client", nouveauClient.getInetAddress(), nouveauClient.getPort()));
                 nouveauGestionnaireClient = new GestionnaireClient(nouveauClient, this);
                 this.clients.add(nouveauGestionnaireClient);
                 this.addObserver(nouveauGestionnaireClient);
@@ -158,6 +159,55 @@ public class Serveur extends Observable implements Runnable {
             }
         }
 
+    }
+
+    /**
+     * Création d'une session pour un utilisateur
+     * @param utilisateur L'utilisateur cible
+     * @return SessionCliente
+     */
+    public SessionCliente creerSession(Utilisateur utilisateur)
+    {
+        SessionCliente sessionCliente;
+
+        EntityTransaction entityTransaction = this.entityManager.getTransaction();
+        entityTransaction.begin();
+
+        sessionCliente = new SessionCliente(utilisateur, UUID.randomUUID().toString(), new Date());
+        this.entityManager.persist(sessionCliente);
+        entityTransaction.commit();
+
+        return sessionCliente;
+    }
+
+    /**
+     * Retire une session de la base de données
+     * @param sessionCliente La session concernée
+     * @return Vrai si l'opération s'est bien passée
+     */
+    public boolean detruireSession(SessionCliente sessionCliente)
+    {
+        if (sessionCliente == null) return false;
+
+        EntityTransaction entityTransaction = this.entityManager.getTransaction();
+        entityTransaction.begin();
+        this.entityManager.remove(sessionCliente);
+        entityTransaction.commit();
+
+        return true;
+    }
+
+    /**
+     * Transmet aux Threads client un paquet
+     * @param salon Le salon concernée
+     * @param paquet Le paquet concernée
+     */
+    public void notifierUtilisateursSalon(Salon salon, Paquet paquet)
+    {
+        for (GestionnaireClient gestionnaireClient : this.getGestionnairesClient(salon))
+        {
+            gestionnaireClient.update(this, paquet);
+        }
     }
 
     /**
@@ -176,7 +226,17 @@ public class Serveur extends Observable implements Runnable {
      */
     public List<Utilisateur> getSalonUtilisateurs(Salon salon)
     {
-        return this.clients.stream().filter( c -> c.getSalon().equals(salon)).map(c -> c.getUtilisateur()).collect(Collectors.toList());
+        return this.clients.stream().filter( c -> c.getSalon().equals(salon)).map(GestionnaireClient::getUtilisateur).collect(Collectors.toList());
+    }
+
+    /**
+     * Récupère la liste des clients actifs en fonction du salon
+     * @param salon Le salon concernée
+     * @return La liste des instances Runnable
+     */
+    private List<GestionnaireClient> getGestionnairesClient(Salon salon)
+    {
+        return this.clients.stream().filter( gc -> gc.getSalon().equals(salon)).collect(Collectors.toList());
     }
 
     public static void main(String[] args)

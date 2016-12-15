@@ -33,7 +33,6 @@ public class GestionnaireClient implements Runnable, Observer {
 
     public GestionnaireClient(Socket unSocketClient, Serveur uneInstanceMere)
     {
-
         this.entityManagerFactory = Persistence.createEntityManagerFactory("Ousret");
         this.entityManager = this.entityManagerFactory.createEntityManager();
 
@@ -45,6 +44,10 @@ public class GestionnaireClient implements Runnable, Observer {
         this.currentThread.start();
     }
 
+    /**
+     * Récupère le salon selectionnée par le client
+     * @return Salon
+     */
     public Salon getSalon() { return this.salon; }
 
     /**
@@ -165,9 +168,7 @@ public class GestionnaireClient implements Runnable, Observer {
                 return false;
             }
 
-            this.supprimerSession();
-
-            return true;
+            return this.instanceMere.detruireSession(this.sessionCliente);
         }
 
         return false;
@@ -202,7 +203,7 @@ public class GestionnaireClient implements Runnable, Observer {
         {
             this.instanceMere.logger.info(String.format("<Client:%s:%d> Authentifié en tant que '%s'.", this.socket.getInetAddress(), this.socket.getPort(), utilisateur.getPseudo()));
 
-            this.sessionCliente = this.creerSession(utilisateur);
+            this.sessionCliente = this.instanceMere.creerSession(utilisateur);
             this.sendPaquet(Paquet.AUTH_OK, this.sessionCliente.getUuid());
 
             return true;
@@ -210,38 +211,6 @@ public class GestionnaireClient implements Runnable, Observer {
 
         this.sendPaquet(Paquet.AUTH_ERREUR, null);
         return false;
-    }
-
-    /**
-     * Création d'une session pour un utilisateur
-     * @param utilisateur L'utilisateur cible
-     * @return SessionCliente
-     */
-    private SessionCliente creerSession(Utilisateur utilisateur)
-    {
-        EntityTransaction entityTransaction = this.entityManager.getTransaction();
-        entityTransaction.begin();
-
-        this.sessionCliente = new SessionCliente(utilisateur, UUID.randomUUID().toString(), new Date("2016/01/01"));
-        this.entityManager.persist(this.sessionCliente);
-        entityTransaction.commit();
-
-        return this.sessionCliente;
-    }
-
-    /**
-     * Supprime la session courante si elle existe
-     */
-    private void supprimerSession()
-    {
-        if (this.sessionCliente != null)
-        {
-            this.instanceMere.logger.info(String.format("<Client:%s:%d> Clôture de la session '%s'.", this.socket.getInetAddress(), this.socket.getPort(), this.sessionCliente.getUuid()));
-            EntityTransaction entityTransaction = this.entityManager.getTransaction();
-            entityTransaction.begin();
-            this.entityManager.remove(this.sessionCliente);
-            entityTransaction.commit();
-        }
     }
 
     /**
@@ -283,11 +252,18 @@ public class GestionnaireClient implements Runnable, Observer {
 
         if (!this.isAuthenticated())
         {
-            this.instanceMere.logger.warning(String.format("<Client:%s:%d> Impossible de publier le message '%s' (anonyme)", socket.getInetAddress(), socket.getPort()));
+            this.instanceMere.logger.warning(String.format("<Client:%s:%d> Impossible de publier le message '%s' (anonyme)", socket.getInetAddress(), socket.getPort(), unMessage));
+            this.sendPaquet(Paquet.KO, unMessage);
+            return false;
+        }
+        else if(this.getSalon() == null)
+        {
+            this.instanceMere.logger.warning(String.format("<Client:%s:%d> Impossible de publier le message '%s' (aucun salon)", socket.getInetAddress(), socket.getPort(), unMessage));
+            this.sendPaquet(Paquet.KO, unMessage);
             return false;
         }
 
-        return this.instanceMere.publierMessage(this.getUtilisateur(), this.salon, unMessage) && this.sendPaquet(Paquet.OK, unMessage);
+        return this.instanceMere.publierMessage(this.getUtilisateur(), this.getSalon(), unMessage) && this.sendPaquet(Paquet.OK, unMessage);
     }
 
     public void run() {
@@ -360,8 +336,11 @@ public class GestionnaireClient implements Runnable, Observer {
             else if(paquetClient.getCommande().equals(Paquet.ASK_ENTER_SALON))
             {
                 Salon nouveauSalon = (Salon) paquetClient.getData();
+
                 this.instanceMere.logger.info(String.format("<Client:%s:%d> Passage sur le salon '%s'.", this.socket.getInetAddress(), this.socket.getPort(), nouveauSalon.getDesignation()));
                 this.setSalon(nouveauSalon);
+
+                this.instanceMere.notifierUtilisateursSalon(this.getSalon(), new Paquet(null, Paquet.ENTRER_UTILISATEUR, this.getUtilisateur()));
             }
             else if(paquetClient.getCommande().equals(Paquet.ASK_MESSAGE))
             {
@@ -378,6 +357,12 @@ public class GestionnaireClient implements Runnable, Observer {
                 {
                     this.instanceMere.logger.warning(String.format("<Client:%s:%d> Impossible de transmettre la liste des utilisateurs du salon", this.socket.getInetAddress(), this.socket.getPort()));
                 }
+            }
+            else if(paquetClient.getCommande().equals(Paquet.NOTIFIE_FERMETURE))
+            {
+                this.instanceMere.logger.info(String.format("<Client:%s:%d> Demande la fermeture de la connexion..", this.socket.getInetAddress(), this.socket.getPort()));
+                this.fermer();
+                break;
             }
 
         }
@@ -400,5 +385,10 @@ public class GestionnaireClient implements Runnable, Observer {
         {
             this.sendPaquet(Paquet.SORTIE_UTILISATEUR, paquet.getData());
         }
+        else if(paquet.getCommande().equals(Paquet.ENTRER_UTILISATEUR) && !((Utilisateur)paquet.getData()).equals(this.getUtilisateur()))
+        {
+            this.sendPaquet(Paquet.ENTRER_UTILISATEUR, paquet.getData());
+        }
+
     }
 }
