@@ -38,8 +38,6 @@ public class Client extends Observable implements Runnable {
     public Client()
     {
         this.paquetsAttente = new LinkedList<Paquet>();
-        this.thread = new Thread(this);
-        this.thread.setDaemon(true);
     }
 
     private Client(String uneAdresseIP, Integer unNumeroPort, String unIdentifiant, String unePhraseSecrete)
@@ -79,7 +77,11 @@ public class Client extends Observable implements Runnable {
     /**
      * Lance la procédure d'écoute
      */
-    public void ecoute() { this.thread.start(); }
+    public void ecoute() {
+        this.thread = new Thread(this);
+        this.thread.setDaemon(true);
+        this.thread.start();
+    }
 
     /**
      * Demande la fermeture de la connexion à l'amiable
@@ -87,7 +89,12 @@ public class Client extends Observable implements Runnable {
      */
     public boolean fermer()
     {
-        return this.isAuthenticated() && this.sendPaquet(Paquet.NOTIFIE_FERMETURE, null);
+        if (!this.isAuthenticated())
+        {
+            return false;
+        }
+
+        return this.sendPaquet(Paquet.NOTIFIE_FERMETURE, null);
     }
 
     /**
@@ -394,6 +401,7 @@ public class Client extends Observable implements Runnable {
             if (paquet.getCommande().equals(Paquet.NOTIFIE_FERMETURE))
             {
                 this.logger.info(String.format("<Serveur> Requête '%s'.", paquet.getCommande()));
+                this.sessionUuid = null;
                 break;
             }
 
@@ -401,6 +409,8 @@ public class Client extends Observable implements Runnable {
             this.setChanged();
             this.notifyObservers(paquet);
         }
+
+        this.logger.info("Client fin d'écoute.");
     }
 
     public static void main(String[] args)

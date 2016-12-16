@@ -135,6 +135,9 @@ public class Controller implements Initializable, Observer {
                         menuitemConnexion.setDisable(false);
                         menuitemDeconnexion.setDisable(true);
 
+                        comboChannel.getItems().clear();
+                        utilisateursSalon.clear();
+
                         chatBoxContentManagement.clear();
                         webEngine.loadContent(chatBoxContentManagement.getRaw());
                     }
@@ -172,6 +175,8 @@ public class Controller implements Initializable, Observer {
         {
             @Override
             public void handle(ActionEvent event) {
+
+                if (comboChannel.getSelectionModel().getSelectedItem() == null) return;
 
                 if (!Main.getClient().setSalon(comboChannel.getSelectionModel().getSelectedItem()))
                 {

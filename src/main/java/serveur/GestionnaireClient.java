@@ -168,7 +168,7 @@ public class GestionnaireClient implements Runnable, Observer {
                 return false;
             }
 
-            return this.instanceMere.detruireSession(this.sessionCliente);
+            return this.instanceMere.detruireSession(this.sessionCliente) && this.instanceMere.retirer(this);
         }
 
         return false;
